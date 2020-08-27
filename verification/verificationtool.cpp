@@ -66,7 +66,7 @@ string Labeled_Image = "Labeled Image";
 string Original_Image = "Original Image";
 Mat img;						// 원본이미지
 Mat src;						// display 모습을 담는다.
-Mat sub_img[1000];				// 각이미지의 sub img를 담는다.
+Mat sub_img[500];				// 각이미지의 sub img를 담는다.
 Mat image_cloned;
 static int sub_num;				// 한 이미지에 담겨있는 label의 총 갯수
 
@@ -90,6 +90,7 @@ atomic<bool> show_mark_class(true);		// switch 문에서 object id 보여주는 것을 결
 atomic<bool> change_index_flag(false);	// index의 수정사항이 있는상태 저장할때 
 atomic<bool> directory(false);			// directory 를 옮겨서 해야하는지의 상태
 atomic<bool> redirectory(false);		// directory 수정한것을 undo해서 directory를 다시 옮겨야할때 사용
+
 
 
 // 좌표 순으로 sorting하기
@@ -134,12 +135,30 @@ static void make_colored_label(int coord_id, Mat subimg[], Mat imgclone, int pre
 	for (int j = 0; j < num_obj.size(); j++) {
 		if (coord_id == num_obj.at(j)) {
 
-			rectangle(subimg[present_pos], Label_coord_in_sub_vec.at(present_pos).abs_rect, color_rect, 1); //하나
-			rectangle(imgclone, Label_coord_in_img_vec.at(present_pos).abs_rect, color_rect, 2); // 여러
+
+			if (coord_id == 91) {
+				cv::Mat roi = subimg[present_pos](Label_coord_in_sub_vec.at(present_pos).abs_rect);
+				cv::Mat rec(roi.size(), CV_8UC3, color_rect);
+				cv::addWeighted(rec, 0.15, roi, 0.85, 0.0, roi);
+
+				cv::Mat roi_img = imgclone(Label_coord_in_img_vec.at(present_pos).abs_rect);
+				cv::Mat rec_img(roi_img.size(), CV_8UC3, color_rect);
+				cv::addWeighted(rec_img, 0.15, roi_img, 0.85, 0.0, roi_img);
+
+
+				rectangle(subimg[present_pos], Label_coord_in_sub_vec.at(present_pos).abs_rect, color_rect, 1);
+				rectangle(imgclone, Label_coord_in_img_vec.at(present_pos).abs_rect, color_rect, 2);
+
+			}
+			else {
+				rectangle(subimg[present_pos], Label_coord_in_sub_vec.at(present_pos).abs_rect, color_rect, 1); //하나
+				rectangle(imgclone, Label_coord_in_img_vec.at(present_pos).abs_rect, color_rect, 2);
+			}
+
+
 			if (present_pos == present_label_pos) {
 				rectangle(imgclone, Label_coord_in_img_vec.at(present_pos).abs_rect, cv::Scalar(255, 0, 255), 2);
 				putText(subimg[present_label_pos], objname_vec.at(j), (Label_coord_in_sub_vec.at(present_label_pos).abs_rect.tl() + Point2f(2 / percentage, 22 / percentage)), FONT_HERSHEY_SIMPLEX, 0.3, color_rect, 1.8);
-
 			}
 
 			if (show_mark_class) {
@@ -147,8 +166,6 @@ static void make_colored_label(int coord_id, Mat subimg[], Mat imgclone, int pre
 
 			}
 		}
-
-
 	}
 }
 
@@ -478,6 +495,7 @@ int main(int argc, char *argv[]) {
 		argv[2] = str_train;
 		argv[3] = str_obj;
 	}
+
 	if (argc < 4) {
 		cout << "Usage: [path_to_images] [train.txt] [obj.names] \n" << endl;
 		return -1;
@@ -797,7 +815,11 @@ Finish:
 					directory = true;
 					break;
 				}
+				if (iter == Label_coord_in_img_vec.end() - 1)
+					redirectory = true;
 			}
+
+
 			save_coord();
 
 			if (directory == true || redirectory == true) {
@@ -829,6 +851,8 @@ Finish:
 					directory = true;
 					break;
 				}
+				if (iter == Label_coord_in_img_vec.end() - 1)
+					redirectory = true;
 			}
 
 			save_coord();
